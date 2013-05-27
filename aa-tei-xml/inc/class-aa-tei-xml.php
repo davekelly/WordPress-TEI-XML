@@ -33,33 +33,31 @@ class AATEIXML{
 	 *
 	 * @param  [type] $content [description]
 	 * @return [type]          [description]
-	 *
-	 * Based on plugin code by:
-	 * @author  mitcho (Michael Yoshitaka Erlewine)
-	 * @link http://wordpress.org/plugins/xml-documents/
 	 */
-	function xmldoc_parse() {
+	function xmldoc_parse( $post_ID = null) {
 		global $post;
+
+		if( is_object($post)){
+			$post_ID = $post->ID;
+		}
 
 		if ( !class_exists( 'XSLTProcessor' ) || !class_exists( 'DOMDocument' ) )
 			return 'XML and XSLT processing is not supported by your PHP installation. Please install <a href="http://www.php.net/manual/en/book.xsl.php">the PHP XSL module</a>.';
 
-		// if ( !$xml_ID = get_post_meta( $post->ID, 'aa_tei_xml', true ) )
-		// 	return 'XML document not set.';
+		if ( !$xml_ID = get_post_meta( $post_ID, 'aa_tei_xml', true ) )
+			 	return 'XML document not set.';
 
 		
-		// $xml = get_post_meta( $xml_ID, '_wp_attached_file', true);
-
-		$xml = get_option('upload_path') . '/2013/05/' . 'LotA.xml';
-		// $xml = get_option('upload_path') . '/2013/05/' . '001vB.xml';
-
-		//var_dump($xml);
+		$teiFile = get_option('upload_path') .'/'. get_post_meta( $xml_ID, '_wp_attached_file', true);
+		//var_dump($teiFile);
 		//die();
-		if ( !file_exists( $xml ) )
+		if ( !file_exists( $teiFile ) ){
 			return 'XML document not found.';	
+			die('XML document not found.');
+		}
 
 		/*
-		$xslt_ID = get_post_meta( $post->ID, 'aa_tei_xslt', true);
+		$xslt_ID = get_post_meta( $post_ID, 'aa_tei_xslt', true);
 
 		// If there's a document-specific XSLT set...
 		if ( isset( $xslt_ID ) ) {
@@ -72,25 +70,13 @@ class AATEIXML{
 				$xslt = AATEIXML_PATH . '/' . $xslt;
 			}
 		} else {
-			// $xslt = STYLESHEETPATH . '/stylesheet.xsl';
-			$xslt = AATEIXML_PATH . '/tei-xsl/xml/tei/stylesheet/xhtml2/tei.xsl';
+			$stylesheet = AATEIXML_PATH . "xsl/default.xsl";
 		}
 		if ( !file_exists( $xslt ) )
 			return $xslt . 'XSLT stylesheet not found.';	
 		*/
 
-		var_dump($xml);
-
 		$stylesheet = AATEIXML_PATH . "xsl/default.xsl";
-
-
-//
-//		------------------
-//						
-
-		
-		$displayType = 'entire';
-		$section = 'body';
 
 		$xp = new XsltProcessor();
 		// create a DOM document and load the XSL stylesheet
@@ -101,19 +87,16 @@ class AATEIXML{
 		$xp->importStylesheet($xsl);
 		
 		//set query parameter to pass into stylesheet
+		$displayType 	= 'entire';
+		$section 		= 'body';
 		$xp->setParameter('', 'display', $displayType);
 		$xp->setParameter('', 'section', $section);
 		
 		// create a DOM document and load the XML data
 		$xml_doc = new DomDocument;
-		
-		// $db = get_db();
-		// $teiFile = $db->getTable('File')->find($file_id)->getWebPath('archive');
-		// // $teiFile = $file[0]->getWebPath('archive');
-		$teiFile = $xml;
-		
 		$xml_doc->load($teiFile);
 
+		// xPath to extract the document title
 		$xpath = new DOMXPath($xml_doc);
 		$titleQueries = '//*[local-name() = "teiHeader"]/*[local-name() = "fileDesc"]/*[local-name() = "titleStmt"]/*[local-name() = "title"]';
 		$nodes = $xpath->query($titleQueries);
@@ -125,18 +108,21 @@ class AATEIXML{
 		
 		
 		try { 
+			// transform to html and update wordpress body content
+			// and title
 			if ($doc = $xp->transformToXML($xml_doc)) {			
-				// echo $doc;
+				
 				$postUpdate = array(
-					'ID' => $post->ID,
+					'ID' 			=> $post_ID,
 					'post_content'	=> $doc
 				);
 				if( $newTitle ){
 					$postUpdate['post_title'] = $newTitle;
 				}
 
-				$updated = wp_update_post( $postUpdate );
+				wp_update_post( $postUpdate );
 				
+				return $postUpdate;
 			}
 		} catch (Exception $e){
 			echo $e->getMessage();
@@ -195,13 +181,18 @@ class AATEIXML{
 		if ( $post->post_mime_type == 'application/xml' ) {
 			$attachment_id = $post->ID;
 			$calling_post_id = 0;
-			if ( isset( $_GET['post_id'] ) )
+			$hit = 0;
+			if ( isset( $_GET['post_id'] ) ){
 				$calling_post_id = absint( $_GET['post_id'] );
-			elseif ( isset( $_POST ) && count( $_POST ) ) // Like for async-upload where $_GET['post_id'] isn't set
+				$hit = 1;
+			}
+			elseif ( isset( $_POST ) && count( $_POST ) ){ // Like for async-upload where $_GET['post_id'] isn't set{
 				$calling_post_id = $post->post_parent;
+				$hit = 2;
+			}
 			if ( $calling_post_id ) {
 				$ajax_nonce = wp_create_nonce( "set_xml_document-$calling_post_id" );
-				$form_fields['buttons'] = array( 'tr' => "\t\t<tr class='submit'><td></td><td class='savesend'><a class='wp-xml-document' id='wp-xml-document-{$attachment_id}' href='#' onclick='WPSetAsXMLDoc(\"$attachment_id\", \"$ajax_nonce\");return false;'>" . esc_html( "Use as XML document" ) . "</a></td></tr>\n" );
+				$form_fields['buttons'] = array( 'tr' => "\t\t<tr class='submit'><td></td><td class='savesend'><a class='wp-xml-document' id='wp-xml-document-{$attachment_id}' href='#' onclick='WPSetAsXMLDoc(\"$attachment_id\", \"$ajax_nonce\", \"$hit\");return false;'>" . esc_html( "Use as XML document" ) . "</a></td></tr>\n" );
 			}
 		}
 		return $form_fields;
@@ -211,13 +202,21 @@ class AATEIXML{
 		global $post_ID;
 		$post_ID = $_POST['post_id'];
 		$xml_ID  = $_POST['xml_id'];
-		if ( isset($post_ID) && check_ajax_referer( "set_xml_document-$post_ID", '_ajax_nonce' ) && isset($xml_ID) ){
-			update_post_meta( $post_ID, 'aa_tei_xml', $xml_ID );
-			$this->xmldoc_parse();
+		$postUpdate = null;
 
-		}else{
-			die( $this->xmldoc_document_html( $xml_ID ) );
+		if ( isset($post_ID) && check_ajax_referer( "set_xml_document-$post_ID", '_ajax_nonce' ) && isset($xml_ID) ){
+		
+			update_post_meta( $post_ID, 'aa_tei_xml', $xml_ID );
+			$postUpdate = $this->xmldoc_parse($post_ID);
+
 		}
+		echo json_encode( array(
+						'html' => $this->xmldoc_document_html( $xml_ID ),
+						'postUpdate' => $postUpdate
+						)
+		);
+		die();
+		
 	}
 
 }

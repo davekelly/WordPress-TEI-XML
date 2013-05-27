@@ -14,6 +14,7 @@
  * [Credits]
  * 
  *  Parts of this plugin are based on work done by:
+ *  	- TEIDisplay Plugin (http://omeka.org/codex/Plugins/TeiDisplay) by ScholarsLab.org at University of Virginia Library
  *  	- XML-Documents Plugin, by mitcho (Michael Yoshitaka Erlewine) - http://wordpress.org/plugins/xml-documents/
  * 		- TEICHI.org Drupal Module:	http://www.teichi.org/
  * 				Current maintainer: Christof Schöch (christof.s) - http://drupal.org/user/1152238

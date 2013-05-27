@@ -7,13 +7,17 @@ function WPSetAsXMLDoc(id, nonce){
 	}, function(str){
 		var win = window.dialogArguments || opener || parent || top;
 		$link.text( 'Use as XML document' );
+		
 		if ( str == '0' ) {
 			alert( 'Could not set as XML document. Try a different attachment.' );
 		} else {
+			str = JSON.parse(str);
 			jQuery('a.wp-xml-document').show();
 			$link.text( 'Done' );
 			$link.fadeOut( 2000 );
-			win.WPSetXMLDocHTML(str);
+			win.WPSetXMLDocHTML(str.html);
+			jQuery('#title').val( str.postUpdate.post_title);
+			jQuery('#content').html( str.postUpdate.post_content);
 		}
 	}
 	);
