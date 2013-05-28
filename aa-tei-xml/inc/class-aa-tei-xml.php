@@ -100,6 +100,7 @@ class AATEIXML{
 		$xpath = new DOMXPath($xml_doc);
 		$titleQueries = '//*[local-name() = "teiHeader"]/*[local-name() = "fileDesc"]/*[local-name() = "titleStmt"]/*[local-name() = "title"]';
 		$nodes = $xpath->query($titleQueries);
+		$newTitle = null;
 		foreach ($nodes as $node){					
 			//see if that text is already set and don't put in any blank or null fields
 			$newTitle = preg_replace('/\s\s+/', ' ', trim($node->nodeValue));
@@ -125,7 +126,7 @@ class AATEIXML{
 				return $postUpdate;
 			}
 		} catch (Exception $e){
-			echo $e->getMessage();
+			return $e->getMessage();
 		} 
 
 		// var_dump($html);
@@ -152,7 +153,7 @@ class AATEIXML{
 	//	$xslt = get_post_meta( $post->ID, '_xslt', true );
 		echo $this->xmldoc_document_html( $xml );
 
-		echo $this->xmldoc_parse();
+		// echo $this->xmldoc_parse();
 	}
 
 	protected function xmldoc_document_html( $xml_ID ) {
@@ -211,8 +212,8 @@ class AATEIXML{
 
 		}
 		echo json_encode( array(
-						'html' => $this->xmldoc_document_html( $xml_ID ),
-						'postUpdate' => $postUpdate
+						'html' 			=> $this->xmldoc_document_html( $xml_ID ),
+						'postUpdate' 	=> $postUpdate
 						)
 		);
 		die();
