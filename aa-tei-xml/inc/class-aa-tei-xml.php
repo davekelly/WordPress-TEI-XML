@@ -18,6 +18,8 @@ class AATEIXML{
 		add_action( 'admin_enqueue_scripts', array($this, 'xmldoc_media_form_enqueue'), 10, 1 );
 		add_filter( 'attachment_fields_to_edit', array($this, 'xmldoc_media_form_fields'), 10, 2 );
 		add_action( 'wp_ajax_set-xml-document', array($this, 'xmldoc_set_xml_document') );
+
+		add_action( 'wp_ajax_set-xsl-document', array($this, 'xmldoc_set_xslt_document') );
 	}
 
 
@@ -56,7 +58,8 @@ class AATEIXML{
 			die('XML document not found.');
 		}
 
-		/*
+		
+		// Check for a user defined xsl file
 		$xslt_ID = get_post_meta( $post_ID, 'aa_tei_xslt', true);
 
 		// If there's a document-specific XSLT set...
@@ -74,9 +77,7 @@ class AATEIXML{
 		}
 		if ( !file_exists( $xslt ) )
 			return $xslt . 'XSLT stylesheet not found.';	
-		*/
-
-		$stylesheet = AATEIXML_PATH . "xsl/default.xsl";
+		
 
 		$xp = new XsltProcessor();
 		// create a DOM document and load the XSL stylesheet
@@ -150,8 +151,10 @@ class AATEIXML{
 	function xmldoc_meta_box() {
 		global $post;	
 		$xml = get_post_meta( $post->ID, 'aa_tei_xml', true );
-	//	$xslt = get_post_meta( $post->ID, '_xslt', true );
+		$xslt = get_post_meta( $post->ID, 'aa_tei_xslt', true );
+
 		echo $this->xmldoc_document_html( $xml );
+		echo $this->xsl_document_html( $xslt );
 
 		// echo $this->xmldoc_parse();
 	}
@@ -159,7 +162,7 @@ class AATEIXML{
 	protected function xmldoc_document_html( $xml_ID ) {
 		global $content_width, $_wp_additional_image_sizes, $post_ID;
 
-		$set_thumbnail_link = '<p class="hide-if-no-js"><a title="' . esc_attr( 'Set XML document' ) . '" href="' . esc_url( get_upload_iframe_src('media') ) . '" id="set-xml-document" class="thickbox">%s</a></p>';
+		$set_thumbnail_link = '<p class="hide-if-no-js"><a title="' . esc_attr( 'Set XML document' ) . '" href="' . esc_url( get_upload_iframe_src('media') . '&amp;aaup=xml') . '" id="set-xml-document" class="thickbox">%s</a></p>';
 		$content = sprintf($set_thumbnail_link, esc_html( 'Set XML document' ));
 
 		$file = get_post_meta( $xml_ID, '_wp_attached_file', true);
@@ -168,6 +171,28 @@ class AATEIXML{
 			$content .= '<p><img src="' . admin_url('images/yes.png') . '" alt="XML document specified"/> XML document specified: <a href="' . esc_html( wp_get_attachment_url( $xml_ID ) ) . '">' . esc_html( get_the_title($xml_ID) ) . '</a></p>';
 
 		return $content;
+	}
+
+	/**
+	 * Generate HTML to handle xsl upload / choice
+	 * @param  [type] $xsl_ID [description]
+	 * @return [type]         [description]
+	 */
+	protected function xsl_document_html( $xsl_ID )
+	{
+		global $content_width, $_wp_additional_image_sizes, $post_ID;
+
+		$set_thumbnail_link = '<p class="hide-if-no-js"><a title="' . esc_attr( 'Set XSLT document' ) . '" href="' . esc_url( get_upload_iframe_src('media') .'&amp;aaup=xsl' ) . '" id="set-xml-document" class="thickbox">%s</a></p>';
+		$content = sprintf($set_thumbnail_link, esc_html( 'Set XSL document' ));
+		$content .= '<span>[Optional: Default xsl file will be used if none is submitted]</span>';
+
+		$file = get_post_meta( $xsl_ID, '_wp_attached_file', true);
+		$abspath = get_option('upload_path') . '/' . $file;
+		if ( $file && file_exists( $abspath ) )
+			$content .= '<p><img src="' . admin_url('images/yes.png') . '" alt="XSLT document specified"/>XSLT document specified: <a href="' . esc_html( wp_get_attachment_url( $xsl_ID ) ) . '">' . esc_html( get_the_title($xsl_ID) ) . '</a></p>';
+
+		return $content;
+
 	}
 
 	// XML DOCUMENT MEDIA ITEM MODS
@@ -182,18 +207,22 @@ class AATEIXML{
 		if ( $post->post_mime_type == 'application/xml' ) {
 			$attachment_id = $post->ID;
 			$calling_post_id = 0;
-			$hit = 0;
+			
+
 			if ( isset( $_GET['post_id'] ) ){
 				$calling_post_id = absint( $_GET['post_id'] );
-				$hit = 1;
 			}
 			elseif ( isset( $_POST ) && count( $_POST ) ){ // Like for async-upload where $_GET['post_id'] isn't set{
 				$calling_post_id = $post->post_parent;
-				$hit = 2;
 			}
 			if ( $calling_post_id ) {
+
+				var_dump($calling_post_id);
+				var_dump($form_fields);
+				var_dump($post);
+				
 				$ajax_nonce = wp_create_nonce( "set_xml_document-$calling_post_id" );
-				$form_fields['buttons'] = array( 'tr' => "\t\t<tr class='submit'><td></td><td class='savesend'><a class='wp-xml-document' id='wp-xml-document-{$attachment_id}' href='#' onclick='WPSetAsXMLDoc(\"$attachment_id\", \"$ajax_nonce\", \"$hit\");return false;'>" . esc_html( "Use as XML document" ) . "</a></td></tr>\n" );
+				$form_fields['buttons'] = array( 'tr' => "\t\t<tr class='submit'><td></td><td class='savesend'><a class='wp-xml-document' id='wp-xml-document-{$attachment_id}' href='#' onclick='WPSetAsXMLDoc(\"$attachment_id\", \"$ajax_nonce\");return false;'>" . esc_html( "Use as XML or XSL document" ) . "</a></td></tr>\n" );
 			}
 		}
 		return $form_fields;
@@ -205,15 +234,28 @@ class AATEIXML{
 		$xml_ID  = $_POST['xml_id'];
 		$postUpdate = null;
 
-		if ( isset($post_ID) && check_ajax_referer( "set_xml_document-$post_ID", '_ajax_nonce' ) && isset($xml_ID) ){
-		
+		if ( isset($post_ID) && check_ajax_referer( "set_xml_document-$post_ID", '_ajax_nonce' ) && isset($xml_ID) ){		
 			update_post_meta( $post_ID, 'aa_tei_xml', $xml_ID );
-			$postUpdate = $this->xmldoc_parse($post_ID);
-
 		}
 		echo json_encode( array(
-						'html' 			=> $this->xmldoc_document_html( $xml_ID ),
-						'postUpdate' 	=> $postUpdate
+							'html' 			=> $this->xmldoc_document_html( $xml_ID )
+						)
+		);
+		die();
+		
+	}
+
+	function xmldoc_set_xsl_document() {
+		global $post_ID;
+		$post_ID = $_POST['post_id'];
+		$xsl_ID  = $_POST['xsl_id'];
+		$postUpdate = null;
+
+		if ( isset($post_ID) && check_ajax_referer( "set_xsl_document-$post_ID", '_ajax_nonce' ) && isset($xsl_ID) ){
+			update_post_meta( $post_ID, 'aa_tei_xsl', $xsl_ID );
+		}
+		echo json_encode( array(
+							'html' 			=> $this->xmldoc_document_html( $xsl_ID )
 						)
 		);
 		die();

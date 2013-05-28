@@ -4,77 +4,10 @@
 
 
     <xsl:template match="/">
-        <!-- 
-        <html>
-            <head>
-                <title>
-                    <xsl:value-of
-                        select="//tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:title[@type='main']"
-                    />
-                </title>
-                <link rel="stylesheet" type="text/css" href="../../CSS/EdRev.css"/>
-            </head>
-
-            <body>
-
-                <div id="header">
-
-                    <h1>The Thomas Moore Hypermedia Archive</h1>
-                    <ul id="navigation">
-                        <li>
-                            <a href="../../TMHA_1.0_Home.html">Home</a>
-                        </li>
-                        <li>
-                            <a href="../../TMHA_1.0_Poetry_Index.html">Poetry</a>
-                        </li>
-                        <li id="youarehere">
-                            <a href="../../TMHA_1.0_Prose_Index.html">Prose</a>
-                        </li>
-                        <li>
-                            <a href="../../TMHA_1.0_Music_Index.html">Music</a>
-                        </li>
-                        <li>
-                            <a href="../../TMHA_1.0_Images_Index.html">Images</a>
-                        </li>
-                        <li>
-                            <a href="../../TMHA_1.0_Resources_Index.html">Resources</a>
-                        </li>
-                        <li>
-                            <a href="../../TMHA_1.0_About_Index.html">About the TMA</a>
-                        </li>
-                        <li>
-                            <a href="../../TMHA_1.0_Search_Index.html">Search</a>
-                        </li>
-                    </ul>
-                </div>
-            -->
+        
 
 
                 <div id="tei_content">
-                    <!-- 
-                    <ul id="crumbtrail">
-                        <li>
-                            <a href="../../TMHA_1.0_Home.html">Home -&gt;</a>
-                        </li>
-                        <li>
-                            <a href="../../TMHA_1.0_Prose_Index.html">Prose -&gt;</a>
-                        </li>
-                        <li>
-                            <a href="TMHA_1.0_Prose_EdRev_Index.html">Edinburgh Review -&gt;</a>
-                        </li>
-                        <li>
-                            <a href="TMHA_1.0_Prose_EdRev_Articles.html">Articles by Thomas Moore
-                                -&gt;</a>
-                        </li>
-                        <li>
-                            <a>
-                                <xsl:value-of
-                                    select="//tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:title[@type='short']"
-                                />
-                            </a>
-                        </li>
-                    </ul>
-                    -->
                     <xsl:apply-templates select="//tei:fileDesc" mode="doctitle"/>
                     <xsl:apply-templates select="//tei:sourceDesc" mode="doctitle"/>
 

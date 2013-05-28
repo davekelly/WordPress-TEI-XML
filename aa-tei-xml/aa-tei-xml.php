@@ -64,6 +64,8 @@ add_filter( 'wp_mime_type_icon', 'aa_xml_mime_type_icon', 10, 3 );
 
 function aa_add_xml_mime($mimes) {
   $mimes['xml'] = 'application/xml';
+  $mimes['xsl'] = 'application/xml';
+  $mimes['xslt'] = 'application/xml';
   return $mimes;
 }
 function aa_xml_mime_type_icon($icon, $mime, $post_id) {
