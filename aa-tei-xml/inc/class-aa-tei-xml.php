@@ -76,7 +76,8 @@ class AATEIXML{
 			return $xslt . 'XSLT stylesheet not found.';	
 		*/
 
-		$stylesheet = AATEIXML_PATH . "xsl/default.xsl";
+		// $stylesheet = AATEIXML_PATH . "xsl/default.xsl";
+		$stylesheet = AATEIXML_PATH . "xsl/francesca.xsl";
 
 		$xp = new XsltProcessor();
 		// create a DOM document and load the XSL stylesheet
@@ -86,7 +87,7 @@ class AATEIXML{
 		$xsl->load($stylesheet);
 		$xp->importStylesheet($xsl);
 		
-		//set query parameter to pass into stylesheet
+		// set query parameter to pass into stylesheet (for default.xsl)
 		$displayType 	= 'entire';
 		$section 		= 'body';
 		$xp->setParameter('', 'display', $displayType);
