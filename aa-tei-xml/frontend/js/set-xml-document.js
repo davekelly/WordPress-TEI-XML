@@ -18,17 +18,15 @@ function WPSetAsXMLDoc(id, nonce){
 				jQuery('a.wp-xml-document').show();
 				$link.text( 'Done' );
 				$link.fadeOut( 2000 );
+
+				// update screen content...
 				win.WPSetXMLDocHTML(str.html);
-				jQuery('#title').val( str.postUpdate.post_title);
-				if( jQuery('#content').length !== 1){
-					console.log('dont have a #content box');
-				}else{
-					console.log('hav a content box');
-					// jQuery('#content').text( str.postUpdate.post_content);	
+				if( str.postUpdate.post_content){
+					win.WPSetEditorContent( str.postUpdate.post_content);
 				}
-				// jQuery('#content').html( str.postUpdate.post_content);
-				win.WPSetEditorContent( str.postUpdate.post_content);
-				win.WPSetTitleContent( str.postUpdate.post_title);
+				if( str.postUpdate.post_title ){
+					win.WPSetTitleContent( str.postUpdate.post_title);
+				}
 
 			}
 		}
