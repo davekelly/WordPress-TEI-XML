@@ -82,23 +82,27 @@ class AATEIXML{
 
 			
 			// Check for a user defined xsl file
-			$xslt_ID = get_post_meta( $post_ID, 'aa_tei_xslt', true);
-
+			$xslt_ID = get_post_meta( $post_ID, 'aa_tei_xsl', true);
+			
 			// If there's a document-specific XSLT set...
-			if ( isset( $xslt_ID ) ) {
-				if ( is_int( $xslt_ID ) ) {
-					// if it's an int, it's an attachment ID.
-					$xslt = get_post_meta( $xslt_ID, '_wp_attached_file', true);
-					$xslt = get_option('upload_path') . '/' . $xslt;
-				} else {
-					// else in current theme dir
-					$xslt = AATEIXML_PATH . '/' . $xslt;
-				}
+			if ( isset( $xslt_ID ) && is_numeric( is_int($xslt_ID ))) {
+				// if it's an int, it's an attachment ID.
+				$stylesheet = get_post_meta( $xslt_ID, '_wp_attached_file', true);
+				$stylesheet = get_option('upload_path') . '/' . $xslt;
+			 
 			} else {
 				$stylesheet = AATEIXML_PATH . "xsl/default.xsl";
 			}
-			if ( !file_exists( $xslt ) )
-				return $xslt . 'XSLT stylesheet not found.';	
+
+			if ( !file_exists( $stylesheet ) ){
+				echo json_encode( array(
+							'success' 	=> false,
+							'message'	=> 'XSLT stylesheet not found.' . $stylesheet 
+						)
+				);
+				die();
+			}
+				
 			
 
 			$xp = new XsltProcessor();
@@ -179,19 +183,19 @@ class AATEIXML{
 	// Add XML document meta box
 	function xmldoc_register_meta_box() {
 		global $post_type;
-		if ( post_type_supports( $post_type, 'xmldoc' ) ) {
-			add_meta_box( 'xml-document', 'XML Document', array($this, 'xmldoc_meta_box'), $post_type, 'normal', 'core' );
+		// if ( post_type_supports( $post_type, 'xmldoc' ) ) {
+			add_meta_box( 'xml-document', 'TEI Document Upload', array($this, 'xmldoc_meta_box'), $post_type, 'normal', 'core' );
 			add_thickbox();
 			wp_enqueue_script('media-upload');
-			$src = AATEIXML_FRONT_URL . 'frontend/js/admin.js';
+			$src = AATEIXML_FRONT_URL . 'frontend/js/aa-tei-admin.js';
 			wp_enqueue_script( 'xml-document-admin', $src, array( 'jquery' ) , '1.0', true );
-		}
+		// }
 	}
 
 	function xmldoc_meta_box() {
 		global $post;	
 		$xml = get_post_meta( $post->ID, 'aa_tei_xml', true );
-		$xslt = get_post_meta( $post->ID, 'aa_tei_xslt', true );
+		$xslt = get_post_meta( $post->ID, 'aa_tei_xsl', true );
 
 		echo $this->xmldoc_document_html( $xml );
 		echo $this->xsldoc_document_html( $xslt );
@@ -212,7 +216,7 @@ class AATEIXML{
 	protected function xmldoc_document_html( $xml_ID ) {
 		global $content_width, $_wp_additional_image_sizes, $post_ID;
 
-		$set_thumbnail_link = '<div id="xml-file-holder"><p class="hide-if-no-js"><a title="' . esc_attr( 'Set XML document' ) . '" href="' . esc_url( get_upload_iframe_src('media') . '&amp;aaup=xml') . '" id="set-xml-document" class="thickbox">%s</a></p>';
+		$set_thumbnail_link = '<div id="xml-file-holder"><p class="hide-if-no-js"><a title="' . esc_attr( 'Set XML document' ) . '" href="' . esc_url( get_upload_iframe_src('media') ) . '" id="set-xml-document" class="thickbox">%s</a></p>';
 		$content = sprintf($set_thumbnail_link, esc_html( 'Set XML document' ));
 
 		$file = get_post_meta( $xml_ID, '_wp_attached_file', true);
@@ -233,7 +237,7 @@ class AATEIXML{
 	{
 		global $content_width, $_wp_additional_image_sizes, $post_ID;
 
-		$set_thumbnail_link = '<div id="xsl-file-holder"><p class="hide-if-no-js"><a title="' . esc_attr( 'Set XSLT document' ) . '" href="' . esc_url( get_upload_iframe_src('media') .'&amp;aaup=xsl' ) . '" id="set-xsl-document" class="thickbox">%s</a></p>';
+		$set_thumbnail_link = '<div id="xsl-file-holder"><p class="hide-if-no-js"><a title="' . esc_attr( 'Set XSLT document' ) . '" href="' . esc_url( get_upload_iframe_src('media')) . '" id="set-xsl-document" class="thickbox">%s</a></p>';
 		$content = sprintf($set_thumbnail_link, esc_html( 'Set XSL document' ));
 		$content .= '<span>[Optional: Default xsl file will be used if none is submitted]</span>';
 
@@ -251,7 +255,7 @@ class AATEIXML{
 	function xmldoc_media_form_enqueue( $page ) {
 		if ( 'media-upload-popup' != $page )
 			return;
-		$src = AATEIXML_FRONT_URL . 'frontend/js/set-xml-document.js';
+		$src = AATEIXML_FRONT_URL . 'frontend/js/aa-tei-document.js';
 		wp_enqueue_script( 'set-xml-document', $src, array( 'jquery' ) , '1.0', true );
 	}
 
