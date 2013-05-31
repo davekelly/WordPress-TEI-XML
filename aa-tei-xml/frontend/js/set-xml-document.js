@@ -1,6 +1,5 @@
 
 
-
 function WPSetAsXMLDoc(id, nonce){
 	var $link = jQuery('a#wp-xml-document-' + id);
 
@@ -20,7 +19,7 @@ function WPSetAsXMLDoc(id, nonce){
 				$link.fadeOut( 2000 );
 
 				// update screen content...
-				win.WPSetXMLDocHTML(str.html);
+				win.WPSetDocHTML(str.html, 'xml');
 
 			}
 		}
@@ -47,7 +46,7 @@ function WPSetAsXSLDoc(id, nonce){
 				$link.fadeOut( 2000 );
 
 				// update screen content...
-				win.WPSetXMLDocHTML(str.html);
+				win.WPSetDocHTML(str.html, 'xsl');
 
 			}
 		}
