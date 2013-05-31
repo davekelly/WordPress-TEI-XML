@@ -252,6 +252,23 @@ class AATEIXML{
 
 	}
 
+	/**
+	 * Generate html for metabox, both for straight
+	 * display and as an ajax response
+	 * 
+	 * @param  Int $xFileId ID of an attached XML/XSL file
+	 * @param  String $type : Type of section we're dealing with $type {xml|xsl}
+	 * @return String $html
+	 */
+	private function aa_doc_html($xFileId, $type)
+	{
+		/**
+		 * @todo  refactor the two functions above and extract the common 
+		 *        parts to here...
+		 */
+	}
+	
+
 	// XML DOCUMENT MEDIA ITEM MODS
 	function xmldoc_media_form_enqueue( $page ) {
 		if ( 'media-upload-popup' != $page )
@@ -260,75 +277,93 @@ class AATEIXML{
 		wp_enqueue_script( 'set-xml-document', $src, array( 'jquery' ) , '1.0', true );
 	}
 
+	/**
+	 * Add link to bottom of media upload lightbox to
+	 * "Use XML/XSL file"
+	 * 
+	 * @param  Mixed $form_fields [description]
+	 * @param  Post $post        
+	 * @return Mixed $form_fields
+	 */
 	function xmldoc_media_form_fields($form_fields, $post) {
-		if ( $post->post_mime_type == 'application/xml' ) {
+
+		if ( $post->post_mime_type == 'application/xml' || $post->post_mime_type == 'application/xsl') {
+
 			$attachment_id = $post->ID;
-			$calling_post_id = 0;
-			
+			$calling_post = $this->get_calling_post_id($post);
 
-			if ( isset( $_GET['post_id'] ) ){
-				$calling_post_id = absint( $_GET['post_id'] );
-			}
-			elseif ( isset( $_POST ) && count( $_POST ) ){ // Like for async-upload where $_GET['post_id'] isn't set{
-				$calling_post_id = $post->post_parent;
-			}
-			if ( $calling_post_id ) {
-
-				$ajax_nonce = wp_create_nonce( "set_xml_document-$calling_post_id" );
-				$form_fields['buttons'] = array( 'tr' => "\t\t<tr class='submit'><td></td><td class='savesend'><a class='wp-xml-document' id='wp-xml-document-{$attachment_id}' href='#' onclick='WPSetAsXMLDoc(\"$attachment_id\", \"$ajax_nonce\");return false;'>" . esc_html( "Use as XML document" ) . "</a></td></tr>\n" );
-			}
-		}elseif( $post->post_mime_type = 'appication/xsl'){
-			$attachment_id = $post->ID;
-			$calling_post_id = 0;
-			
-
-			if ( isset( $_GET['post_id'] ) ){
-				$calling_post_id = absint( $_GET['post_id'] );
-			}
-			elseif ( isset( $_POST ) && count( $_POST ) ){ // Like for async-upload where $_GET['post_id'] isn't set{
-				$calling_post_id = $post->post_parent;
-			}
-			if ( $calling_post_id ) {
-				
-				$ajax_nonce = wp_create_nonce( "set_xsl_document-$calling_post_id" );
-				$form_fields['buttons'] = array( 'tr' => "\t\t<tr class='submit'><td></td><td class='savesend'><a class='wp-xsl-document' id='wp-xsl-document-{$attachment_id}' href='#' onclick='WPSetAsXSLDoc(\"$attachment_id\", \"$ajax_nonce\");return false;'>" . esc_html( "Use as XSL document" ) . "</a></td></tr>\n" );
+			if( $post->post_mime_type == 'application/xml'){
+				if ( $calling_post_id ) {
+					$ajax_nonce = wp_create_nonce( "set_xml_document-$calling_post_id" );
+					$form_fields['buttons'] = array( 'tr' => "\t\t<tr class='submit'><td></td><td class='savesend'><a class='wp-xml-document' id='wp-xml-document-{$attachment_id}' href='#' onclick='WPSetAsXMLDoc(\"$attachment_id\", \"$ajax_nonce\");return false;'>" . esc_html( "Use as XML document" ) . "</a></td></tr>\n" );
+				}
+			}else{
+				// xsl doc...
+				if ( $calling_post_id ) {
+					$ajax_nonce = wp_create_nonce( "set_xsl_document-$calling_post_id" );
+					$form_fields['buttons'] = array( 'tr' => "\t\t<tr class='submit'><td></td><td class='savesend'><a class='wp-xsl-document' id='wp-xsl-document-{$attachment_id}' href='#' onclick='WPSetAsXSLDoc(\"$attachment_id\", \"$ajax_nonce\");return false;'>" . esc_html( "Use as XSL document" ) . "</a></td></tr>\n" );
+				}
 			}
 		}
 		return $form_fields;
 	}
 
-	function xmldoc_set_xml_document() {
-		global $post_ID;
-		$post_ID = $_POST['post_id'];
-		$xml_ID  = $_POST['xml_id'];
-		$postUpdate = null;
-
-		if ( isset($post_ID) && check_ajax_referer( "set_xml_document-$post_ID", '_ajax_nonce' ) && isset($xml_ID) ){		
-			update_post_meta( $post_ID, 'aa_tei_xml', $xml_ID );
+	/**
+	 * Return the id of the post calling the media
+	 * upload lightbox
+	 * 
+	 * @param  Post $post 
+	 * @return Int $calling_post_id
+	 */
+	private function get_calling_post_id($post)
+	{
+		$calling_post_id = 0;
+			
+		if ( isset( $_GET['post_id'] ) ){
+			$calling_post_id = absint( $_GET['post_id'] );
 		}
+		elseif ( isset( $_POST ) && count( $_POST ) ){ // Like for async-upload where $_GET['post_id'] isn't set{
+			$calling_post_id = $post->post_parent;
+		}
+
+		return $calling_post_id;
+	}
+
+	function xmldoc_set_xml_document() {
+		
+		$xml_ID  = $_POST['xml_id'];
+		$postUpdate = $this->xFileUpdate($xml_ID, 'aa_tei_xml');
+
 		echo json_encode( array(
-							'html' 			=> $this->xmldoc_document_html( $xml_ID )
-						)
+				'html' 	=> $this->xmldoc_document_html( $xml_ID )
+			)
 		);
 		die();
 		
 	}
 
 	function xmldoc_set_xsl_document() {
-		global $post_ID;
-		$post_ID = $_POST['post_id'];
+		
 		$xsl_ID  = $_POST['xsl_id'];
-		$postUpdate = null;
+		$postUpdate = $this->xFileUpdate($xsl_ID, 'aa_tei_xsl');
 
-		if ( isset($post_ID) && check_ajax_referer( "set_xsl_document-$post_ID", '_ajax_nonce' ) && isset($xsl_ID) ){
-			update_post_meta( $post_ID, 'aa_tei_xsl', $xsl_ID );
-		}
 		echo json_encode( array(
-							'html' 			=> $this->xsldoc_document_html( $xsl_ID )
-						)
+				'html' 	=> $this->xsldoc_document_html( $xsl_ID )
+			)
 		);
 		die();
 		
+	}
+
+	private function xFileUpdate( $xFile_ID, $meta_update_name)
+	{
+		$post_ID = $_POST['post_id'];
+
+		if ( isset($post_ID) && check_ajax_referer( "set_xsl_document-$post_ID", '_ajax_nonce' ) && isset($xFile_ID) ){
+			update_post_meta( $post_ID, $meta_update_name, $xsl_ID );
+			return true;
+		}
+		return false;
 	}
 
 }
