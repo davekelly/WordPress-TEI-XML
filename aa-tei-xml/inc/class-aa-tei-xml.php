@@ -22,12 +22,31 @@ class AATEIXML{
 		add_action( 'wp_ajax_set-xsl-document', array($this, 'xmldoc_set_xsl_document') );
 
 		add_action( 'wp_ajax_parse-xml-document', array($this, 'xmldoc_parse') );
+
+		add_shortcode( 'tei_download', array($this, 'display_xml_download_info') );
 	}
 
 
 
-	function xmldoc_content_update()
+	function display_xml_download_info($content)
 	{
+		global $post;
+
+		$teiFile = $this->get_xml_file($post->ID, $asUrl = true);
+		$html = '';
+
+		if( !is_wp_error( $teiFile)){
+			$html = '<div class="tei-file-download">
+						<h4 style="margin: 10px 0; padding: 0;">Download</h4>
+						<a class="tei-dowload-link" href="'. $teiFile . '">
+							Download the TEI Encoded File</a>
+						<p>(NOTE: could also parse TEI header info and output it?)</p>
+					</div> <!-- .tei-file-download -->
+					';	
+			$content = $html . $content;	
+		}
+
+		return $content;
 
 	}
 
@@ -44,10 +63,10 @@ class AATEIXML{
 		$post_ID = $_POST['post_id'];
 		
 
+		// Nonce & $post_ID ok
 		if ( ( isset($post_ID) && is_numeric($post_ID) ) && check_ajax_referer( "aa-parse-xml-nonce-$post_ID", '_ajax_nonce' ) ){		
 
-		
-
+			// have xslt installed?		
 			if ( !class_exists( 'XSLTProcessor' ) || !class_exists( 'DOMDocument' ) ){
 				echo json_encode( array(
 							'success' 	=> false,
@@ -57,54 +76,29 @@ class AATEIXML{
 				die();
 			}
 				
-			if ( !$xml_ID = get_post_meta( $post_ID, 'aa_tei_xml', true ) ){
-				echo json_encode( array(
-							'success' 	=> false,
-							'message'	=> 'XML document not set.'
-						)
-				);
-				die();
-			}
-
-			
-			$teiFile = get_option('upload_path') .'/'. get_post_meta( $xml_ID, '_wp_attached_file', true);
-			//var_dump($teiFile);
-			//die();
-			if ( !file_exists( $teiFile ) ){
-				
-				echo json_encode( array(
-							'success' 	=> false,
-							'message'	=> 'XML file not found.'
-						)
+			$teiFile = $this->get_xml_file($post_ID);
+			// array comes back if there's an error message
+			// 
+			if( is_wp_error( $teiFile)){
+				echo json_encode(array(
+					'success' => false, 
+					'message' => $teiFile->get_error_message()
+					)
 				);
 				die();
 			}
 
 			
 			// Check for a user defined xsl file
-			$xslt_ID = get_post_meta( $post_ID, 'aa_tei_xsl', true);
-			
-			// If there's a document-specific XSLT set...
-			if ( isset( $xslt_ID ) && is_numeric( is_int($xslt_ID ))) {
-				// if it's an int, it's an attachment ID.
-				$stylesheet = get_post_meta( $xslt_ID, '_wp_attached_file', true);
-				$stylesheet = get_option('upload_path') . '/' . $xslt;
-			 
-			} else {
-				$stylesheet = AATEIXML_PATH . "xsl/default.xsl";
-			}
-
-
-			if ( !file_exists( $stylesheet ) ){
+			$stylesheet = $this->get_xsl_file($post_ID);
+			if( is_wp_error( $stylesheet ) ){
 				echo json_encode( array(
 							'success' 	=> false,
-							'message'	=> 'XSLT stylesheet not found.' . $stylesheet 
+							'message'	=> $stylesheet->get_error_message() 
 						)
 				);
 				die();
 			}
-				
-			
 
 			$xp = new XsltProcessor();
 			// create a DOM document and load the XSL stylesheet
@@ -134,7 +128,6 @@ class AATEIXML{
 				$newTitle = preg_replace('/\s\s+/', ' ', trim($node->nodeValue));
 			}
 
-			
 			
 			try { 
 				// transform to html and update wordpress body content
@@ -179,6 +172,55 @@ class AATEIXML{
 		// die();
 	}
 
+	protected function get_xml_file($post_ID, $asUrl = false)
+	{
+		// have an xml file name to use?
+		if ( !$xml_ID = get_post_meta( $post_ID, 'aa_tei_xml', true ) ){
+			return new WP_Error('filenotfound', __('XML document not set.'));
+		}
+
+		$file = get_post_meta( $xml_ID, '_wp_attached_file', true);
+		
+		$teiFile = get_option('upload_path') .'/'. $file;
+		
+		// does the file exist?
+		if ( !file_exists( $teiFile ) ){
+			return new WP_Error('filenotfound', __('XML file not found.'));
+		}
+		
+		if( $asUrl){
+			$dir = wp_upload_dir();
+
+			$teiFile = $dir['baseurl'] . '/' . $file;
+		}
+
+		return $teiFile;
+
+	}
+
+	protected function get_xsl_file( $post_ID )
+	{
+		$xslt_ID 	= get_post_meta( $post_ID, 'aa_tei_xsl', true);
+
+		// If there's a document-specific XSLT set...
+		if ( isset( $xslt_ID ) && is_numeric( is_int($xslt_ID ))) {
+			// if it's an int, it's an attachment ID.
+			$stylesheet = get_post_meta( $xslt_ID, '_wp_attached_file', true);
+			$stylesheet = get_option('upload_path') . '/' . $xslt;
+		 
+		} else {
+			$stylesheet = AATEIXML_PATH . "xsl/default.xsl";
+		}
+
+		// does an xsl file exist?
+		if ( !file_exists( $stylesheet ) ){
+			return new WP_Error('filenotfound', __('XSL file not found.'));
+		}
+
+		return $stylesheet;
+
+	}
+
 	// XML DOCS EDIT SCREEN
 
 	// Add XML document meta box
@@ -193,15 +235,30 @@ class AATEIXML{
 		// }
 	}
 
+	/**
+	 * Set up and echo the meta box on the post page
+	 * 
+	 * @return Void
+	 */
 	function xmldoc_meta_box() {
 		global $post;	
-		$xml = get_post_meta( $post->ID, 'aa_tei_xml', true );
-		$xslt = get_post_meta( $post->ID, 'aa_tei_xsl', true );
+		$xml 	= get_post_meta( $post->ID, 'aa_tei_xml', true );
+		$xslt 	= get_post_meta( $post->ID, 'aa_tei_xsl', true );
 
 		echo $this->xmldoc_document_html( $xml );
 		echo $this->xsldoc_document_html( $xslt );
 		echo $this->xmldoc_get_parse_button_html($post->ID);
-		// echo $this->xmldoc_parse();
+		echo $this->get_meta_box_instruction();
+	}
+
+	protected function get_meta_box_instruction()
+	{
+		return '<div>
+					<p>
+						<strong>Note</strong>: You can use the shortcode [tei_download] in the page
+				 		to display an option to download the source xml file
+			 		</p>
+		 		</div>';
 	}
 
 	protected function xmldoc_get_parse_button_html($post_ID)
@@ -214,6 +271,11 @@ class AATEIXML{
 				</div>';
 	}
 
+	/**
+	 * Generate HTML to handle xml upload / choice
+	 * @param  [type] $xml_ID [description]
+	 * @return [type]         [description]
+	 */
 	protected function xmldoc_document_html( $xml_ID ) {
 		global $content_width, $_wp_additional_image_sizes, $post_ID;
 
@@ -277,6 +339,7 @@ class AATEIXML{
 		wp_enqueue_script( 'set-xml-document', $src, array( 'jquery' ) , '1.0', true );
 	}
 
+
 	/**
 	 * Add link to bottom of media upload lightbox to
 	 * "Use XML/XSL file"
@@ -290,7 +353,8 @@ class AATEIXML{
 		if ( $post->post_mime_type == 'application/xml' || $post->post_mime_type == 'application/xsl') {
 
 			$attachment_id = $post->ID;
-			$calling_post = $this->get_calling_post_id($post);
+			$calling_post_id  = $this->get_calling_post_id($post);
+
 
 			if( $post->post_mime_type == 'application/xml'){
 				if ( $calling_post_id ) {
@@ -306,7 +370,8 @@ class AATEIXML{
 			}
 		}
 		return $form_fields;
-	}
+	} 
+
 
 	/**
 	 * Return the id of the post calling the media
@@ -317,6 +382,7 @@ class AATEIXML{
 	 */
 	private function get_calling_post_id($post)
 	{
+
 		$calling_post_id = 0;
 			
 		if ( isset( $_GET['post_id'] ) ){
@@ -329,7 +395,16 @@ class AATEIXML{
 		return $calling_post_id;
 	}
 
-	function xmldoc_set_xml_document() {
+
+	/**
+	 * Ajax function to set the xml file attached to this
+	 * post
+	 * 
+	 * @return String $json : json encoded array of ['html' => 'html content to inject into 
+	 * the page']
+	 */
+	function xmldoc_set_xml_document() 
+	{
 		
 		$xml_ID  = $_POST['xml_id'];
 		$postUpdate = $this->xFileUpdate($xml_ID, 'aa_tei_xml');
@@ -342,7 +417,15 @@ class AATEIXML{
 		
 	}
 
-	function xmldoc_set_xsl_document() {
+	/**
+	 * Ajax function to set the xsl file attached to this
+	 * post
+	 * 
+	 * @return String $json : json encoded array of ['html' => 'html content to inject into 
+	 * the page']
+	 */
+	function xmldoc_set_xsl_document() 
+	{
 		
 		$xsl_ID  = $_POST['xsl_id'];
 		$postUpdate = $this->xFileUpdate($xsl_ID, 'aa_tei_xsl');
@@ -355,12 +438,28 @@ class AATEIXML{
 		
 	}
 
+	/**
+	 * Set a given file attachment ID as meta info for a 
+	 * post. Called during an Ajax request => checks nonce
+	 * and uses $_POST data
+	 * 
+	 * @param  Int $xFile_ID - ID of the attachment
+	 * @param  String $meta_update_name meta_name to use
+	 * @return Bool $success
+	 */
 	private function xFileUpdate( $xFile_ID, $meta_update_name)
 	{
 		$post_ID = $_POST['post_id'];
 
-		if ( isset($post_ID) && check_ajax_referer( "set_xsl_document-$post_ID", '_ajax_nonce' ) && isset($xFile_ID) ){
-			update_post_meta( $post_ID, $meta_update_name, $xsl_ID );
+		$nonceCheck = false;
+		if( $meta_update_name === 'aa_tei_xsl'){
+			$nonceCheck = check_ajax_referer( "set_xsl_document-$post_ID", '_ajax_nonce');
+		}elseif( $meta_update_name === 'aa_tei_xml'){
+			$nonceCheck = check_ajax_referer( "set_xml_document-$post_ID", '_ajax_nonce');
+		}
+
+		if ( isset($post_ID) && $nonceCheck && isset($xFile_ID) ){
+			update_post_meta( $post_ID, $meta_update_name, $xFile_ID );
 			return true;
 		}
 		return false;
