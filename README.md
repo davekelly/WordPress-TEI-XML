@@ -10,7 +10,11 @@ recommended on production sites.
 
 ##Credits
  
- Parts of this plugin are based on work done by:
+Code for this plug-in was developed for the [Thomas Moore Archive](http://www.thomasmoore.ie) project at the [Moore Institute](http://nuigalway.ie/mooreinstitute), [NUI Galway](http://nuigalway.ie).
+
+
+Parts of this plugin are based on:
+
  - Omeka [TEIDisplay Plugin](http://omeka.org/codex/Plugins/TeiDisplay) by ScholarsLab.org at University of Virginia Library
  - WordPress [XML-Documents Plugin](http://wordpress.org/plugins/xml-documents/), by mitcho (Michael Yoshitaka Erlewine)
  - [TEICHI.org Drupal Module](http://www.teichi.org/)

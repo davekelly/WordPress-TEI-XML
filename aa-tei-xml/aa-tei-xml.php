@@ -12,7 +12,11 @@
 
 /*
  * [Credits]
- * 
+ *
+ *  
+ *  Code for this plug-in was developed for the [Thomas Moore Archive](http://www.thomasmoore.ie) project at 
+ *  the [Moore Institute](http://nuigalway.ie/mooreinstitute), [NUI Galway](http://nuigalway.ie).
+ *  
  *  Parts of this plugin are based on work done by:
  *  	- TEIDisplay Plugin (http://omeka.org/codex/Plugins/TeiDisplay) by ScholarsLab.org at University of Virginia Library
  *  	- XML-Documents Plugin, by mitcho (Michael Yoshitaka Erlewine) - http://wordpress.org/plugins/xml-documents/
