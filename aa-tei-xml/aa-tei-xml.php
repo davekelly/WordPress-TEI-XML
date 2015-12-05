@@ -68,12 +68,13 @@ add_filter( 'wp_mime_type_icon', 'aa_xml_mime_type_icon', 10, 3 );
 
 function aa_add_xml_mime($mimes) {
   $mimes['xml'] = 'application/xml';
-  $mimes['xsl'] = 'application/xsl';
-  // $mimes['xslt'] = 'application/xml';
+  $mimes['tei'] = 'application/tei+xml'; // http://www.iana.org/assignments/media-types/application/tei+xml
+  $mimes['xsl'] = 'application/xslt+xml';     // http://www.iana.org/assignments/media-types/media-types.xhtml, http://www.w3.org/TR/2007/REC-xslt20-20070123/#media-type-registration
+  $mimes['xslt'] = 'application/xslt+xml';
   return $mimes;
 }
 function aa_xml_mime_type_icon($icon, $mime, $post_id) {
-	if ( $mime == 'application/xml' || $mime == 'text/xml' )
+	if ( $mime == 'application/xml' || $mime == 'text/xml'  || $mime == 'application/tei+xml' )
 		return wp_mime_type_icon('document');
 	return $icon;
 }
