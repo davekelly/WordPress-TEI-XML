@@ -181,7 +181,7 @@ class AATEIXML{
 
 		$file = get_post_meta( $xml_ID, '_wp_attached_file', true);
 		
-		$teiFile = get_option('upload_path') .'/'. $file;
+		$teiFile = get_attached_file($xml_ID);
 		
 		// does the file exist?
 		if ( !file_exists( $teiFile ) ){
@@ -200,13 +200,13 @@ class AATEIXML{
 
 	protected function get_xsl_file( $post_ID )
 	{
-		$xslt_ID 	= get_post_meta( $post_ID, 'aa_tei_xsl', true);
+		$xsl_ID 	= get_post_meta( $post_ID, 'aa_tei_xsl', true);
 
 		// If there's a document-specific XSLT set...
-		if ( isset( $xslt_ID ) && is_numeric( is_int($xslt_ID ))) {
+		if ( isset( $xsl_ID ) && is_numeric( is_int($xsl_ID ))) {
 			// if it's an int, it's an attachment ID.
-			$stylesheet = get_post_meta( $xslt_ID, '_wp_attached_file', true);
-			$stylesheet = get_option('upload_path') . '/' . $xslt;
+			//$stylesheet = get_post_meta( $xsl_ID, '_wp_attached_file', true);
+			$stylesheet = get_attached_file($xsl_ID);
 		 
 		} else {
 			$stylesheet = AATEIXML_PATH . "xsl/default.xsl";
@@ -283,10 +283,12 @@ class AATEIXML{
 		$content = sprintf($set_thumbnail_link, esc_html( 'Set XML document' ));
 
 		$file = get_post_meta( $xml_ID, '_wp_attached_file', true);
-		$abspath = get_option('upload_path') . '/' . $file;
-		if ( $file && file_exists( $abspath ) )
+		$abspath = get_attached_file($xml_ID);
+		if ( $file && file_exists( $abspath ) ) {
 			$content .= '<p><img src="' . admin_url('images/yes.png') . '" alt="XML document specified"/> XML document specified: <a href="' . esc_html( wp_get_attachment_url( $xml_ID ) ) . '">' . esc_html( get_the_title($xml_ID) ) . '</a></p>';
-
+    } else {
+			$content .= '<p><img src="' . admin_url('images/no.png') . '" alt="XML document NOT specified"/> XML document NOT specified: ' . esc_html( get_the_title($xml_ID) ) . '</p>';
+    }
 		$content .= '</div> <!-- #xml-file-holder -->';
 		return $content;
 	}
@@ -305,7 +307,7 @@ class AATEIXML{
 		$content .= '<span>[Optional: Default xsl file will be used if none is submitted]</span>';
 
 		$file = get_post_meta( $xsl_ID, '_wp_attached_file', true);
-		$abspath = get_option('upload_path') . '/' . $file;
+		$abspath = get_attached_file($xsl_ID);
 		if ( $file && file_exists( $abspath ) )
 			$content .= '<p><img src="' . admin_url('images/yes.png') . '" alt="XSLT document specified"/>XSLT document specified: <a href="' . esc_html( wp_get_attachment_url( $xsl_ID ) ) . '">' . esc_html( get_the_title($xsl_ID) ) . '</a></p>';
 
